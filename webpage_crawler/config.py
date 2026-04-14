@@ -26,9 +26,6 @@ class SiteConfig:
     navigation_timeout_ms: int = 30_000
     retries: int = 2
     headless: bool = True
-    user_agent: str | None = None
-    accept_language: str = "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7"
-    log_progress: bool = True
     click_visible_elements: bool = True
     max_interaction_clicks_per_page: int = 200
     interaction_candidate_selector: str = (
@@ -71,9 +68,6 @@ class SiteConfig:
             navigation_timeout_ms=int(data.get("navigation_timeout_ms", 30_000)),
             retries=int(data.get("retries", 2)),
             headless=bool(data.get("headless", True)),
-            user_agent=data.get("user_agent"),
-            accept_language=str(data.get("accept_language", "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7")),
-            log_progress=bool(data.get("log_progress", True)),
             click_visible_elements=bool(data.get("click_visible_elements", True)),
             max_interaction_clicks_per_page=int(data.get("max_interaction_clicks_per_page", 200)),
             interaction_candidate_selector=str(

@@ -17,7 +17,8 @@ from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 from .config import SiteConfig
 from .extractor import PageFeatures, extract_page_features, snapshot_visible_state
 
-
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+LANGUAGE = "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7"
 class DomainPolicy:
     def __init__(
         self,
@@ -169,12 +170,11 @@ class WebPageCrawler:
             "timezone_id": "Asia/Tokyo",
             "viewport": {"width": 1366, "height": 768},
             "extra_http_headers": {
-                "Accept-Language": self.config.accept_language,
+                "Accept-Language": LANGUAGE,
                 "Upgrade-Insecure-Requests": "1",
             },
+            "user_agent": USER_AGENT
         }
-        if self.config.user_agent:
-            kwargs["user_agent"] = self.config.user_agent
         return await browser.new_context(**kwargs)
 
     async def _run_interactions(self, page: Page, base_url: str) -> list[dict[str, Any]]:
@@ -329,9 +329,8 @@ class WebPageCrawler:
 
     def _log(self, message: str) -> None:
         """進捗ログが有効な場合、日時付きメッセージを標準エラーへ即時出力します。"""
-        if self.config.log_progress:
-            timestamp = datetime.now().isoformat(timespec="seconds")
-            print(f"[{timestamp}] [crawler] {message}", file=sys.stderr, flush=True)
+        timestamp = datetime.now().isoformat(timespec="seconds")
+        print(f"[{timestamp}] [crawler] {message}", file=sys.stderr, flush=True)
 
     def _filter_feature_links(self, features: PageFeatures) -> PageFeatures:
         """抽出済み特徴量のリンクを、クロール対象ドメイン内のURLだけに絞り込みます。"""
