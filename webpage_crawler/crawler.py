@@ -88,14 +88,32 @@ class WebPageCrawler:
 
                 results.append(features)
                 added_links = 0
+                skipped_visited_links = 0
+                skipped_policy_links = 0
+                raw_links_seen = 0
                 for link in _feature_links(features):
+                    raw_links_seen += 1
                     normalized = normalize_url(link)
-                    if normalized not in visited and self.policy.allows(normalized):
-                        queue.append(normalized)
-                        added_links += 1
+                    if not normalized:
+                        skipped_policy_links += 1
+                        continue
+                    if normalized in visited:
+                        skipped_visited_links += 1
+                        self._log(f"link skip visited: {normalized}")
+                        continue
+                    if not self.policy.allows(normalized):
+                        skipped_policy_links += 1
+                        self._log(f"link skip policy: {normalized}")
+                        continue
+                    queue.append(normalized)
+                    added_links += 1
+                    self._log(f"link queued: {normalized}")
                 self._log(
                     f"page done: {features.url} "
-                    f"title={features.title!r} links_added={added_links} "
+                    f"title={features.title!r} success_count={len(results)} "
+                    f"raw_links={raw_links_seen} links_added={added_links} "
+                    f"links_skip_visited={skipped_visited_links} "
+                    f"links_skip_policy={skipped_policy_links} "
                     f"snapshots={len(features.interaction_snapshots)} queue={len(queue)}"
                 )
 
@@ -242,10 +260,11 @@ class WebPageCrawler:
                         _candidate_name(candidate),
                         self.config.interaction_candidate_selector,
                     )
-                    snapshots.append(self._filter_snapshot_links(snapshot))
+                    filtered_snapshot = self._filter_snapshot_links(snapshot)
+                    snapshots.append(filtered_snapshot)
                     self._log(
                         f"auto click captured: {index}/{len(candidates)} "
-                        f"{label} url={page.url}"
+                        f"{label} url={page.url} snapshot_url={filtered_snapshot.get('url')}"
                     )
                 else:
                     self._log(f"auto click outside domain after click: {index}/{len(candidates)} url={page.url}")
@@ -268,6 +287,7 @@ class WebPageCrawler:
               const href = element.href || element.getAttribute("href") || "";
               const disabled = element.disabled || element.getAttribute("aria-disabled") === "true";
               const visible = !disabled &&
+                !element.closest("header, footer") &&
                 rect.width > 0 &&
                 rect.height > 0 &&
                 style.visibility !== "hidden" &&
@@ -351,8 +371,10 @@ class WebPageCrawler:
 
     def _filter_snapshot_links(self, snapshot: dict[str, Any]) -> dict[str, Any]:
         """操作後スナップショット内のリンクを、クロール対象ドメイン内のURLだけに絞り込みます。"""
+        snapshot_url = normalize_url(str(snapshot.get("url") or ""))
         return {
             **snapshot,
+            "url": snapshot_url if snapshot_url and self.policy.allows(snapshot_url) else None,
             "links": sorted(
                 {
                     normalized
@@ -386,6 +408,8 @@ def normalize_url(url: str) -> str:
 def _feature_links(features: PageFeatures) -> set[str]:
     links = set(features.links)
     for snapshot in features.interaction_snapshots:
+        if snapshot.get("url"):
+            links.add(str(snapshot["url"]))
         links.update(snapshot.get("links", []))
     return links
 

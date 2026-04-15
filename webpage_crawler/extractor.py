@@ -72,6 +72,7 @@ async def snapshot_visible_state(page: Page, name: str, selector: str) -> dict[s
     return {
         "name": name,
         "selector": selector,
+        "url": page.url,
         "title": (await page.title()).strip(),
         "visible_text": _compact_text(body_text),
         "markdown": to_markdown(str(soup.body or soup), heading_style="ATX").strip(),
@@ -88,15 +89,7 @@ async def collect_href_links(page: Page) -> list[str]:
         "a[href], area[href]",
         """
         elements => elements
-          .filter(element => {
-            const rect = element.getBoundingClientRect();
-            const style = window.getComputedStyle(element);
-            return rect.width > 0 &&
-              rect.height > 0 &&
-              style.visibility !== "hidden" &&
-              style.display !== "none" &&
-              Number(style.opacity || "1") > 0;
-          })
+          .filter(element => !element.closest("header, footer"))
           .map(element => element.href || element.getAttribute("href"))
           .filter(Boolean)
         """,
