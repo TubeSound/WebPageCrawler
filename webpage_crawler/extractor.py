@@ -4,12 +4,14 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from bs4 import BeautifulSoup
-from markdownify import markdownify as to_markdown
+# from markdownify import markdownify as to_markdown
 from playwright.async_api import Page
 
 
 @dataclass(frozen=True)
 class PageFeatures:
+    """クロール済みページから取得したリンク・タグ情報"""
+
     url: str
     title: str
     section_count: int
@@ -24,6 +26,7 @@ class PageFeatures:
     interaction_snapshots: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """JSONLへ書き出しやすい辞書形式へ変換"""
         return asdict(self)
 
 
@@ -33,6 +36,7 @@ async def extract_page_features(
     headers: dict[str, str] | None = None,
     interaction_snapshots: list[dict[str, Any]] | None = None,
 ) -> PageFeatures:
+    """現在表示中のページからタイトル、見出し数、リンクを抽出する。"""
     headers = {k.lower(): v for k, v in (headers or {}).items()}
     html = await page.content()
     soup = BeautifulSoup(html, "html.parser")
@@ -55,13 +59,15 @@ async def extract_page_features(
         last_modified=headers.get("last-modified"),
         etag=headers.get("etag"),
         visible_text=_compact_text(body_text),
-        markdown=to_markdown(str(soup.body or soup), heading_style="ATX").strip(),
+        # markdown=to_markdown(str(soup.body or soup), heading_style="ATX").strip(),
+        markdown="",
         links=sorted(set(str(link) for link in links)),
         interaction_snapshots=interaction_snapshots or [],
     )
 
 
 async def snapshot_visible_state(page: Page, name: str, selector: str) -> dict[str, Any]:
+    """クリック操作後の表示状態を、リンク付きのスナップショットとして保存。"""
     html = await page.content()
     soup = BeautifulSoup(html, "html.parser")
     for tag in soup(["script", "style", "noscript", "template"]):
@@ -75,16 +81,19 @@ async def snapshot_visible_state(page: Page, name: str, selector: str) -> dict[s
         "url": page.url,
         "title": (await page.title()).strip(),
         "visible_text": _compact_text(body_text),
-        "markdown": to_markdown(str(soup.body or soup), heading_style="ATX").strip(),
+        # "markdown": to_markdown(str(soup.body or soup), heading_style="ATX").strip(),
+        "markdown": "",
         "links": sorted(set(str(link) for link in links)),
     }
 
 
 def _compact_text(text: str) -> str:
+    """空行を除去し、表示テキストを行単位で読みやすく整形する"""
     return "\n".join(line.strip() for line in text.splitlines() if line.strip())
 
 
 async def collect_href_links(page: Page) -> list[str]:
+    """header/footer配下を除いたページ内リンクをすべて収集する　"""
     return await page.eval_on_selector_all(
         "a[href], area[href]",
         """
@@ -97,6 +106,7 @@ async def collect_href_links(page: Page) -> list[str]:
 
 
 def _clean_images(soup: BeautifulSoup) -> None:
+    """画像はaltテキストへ置換し、altがない装飾画像はMarkdown化前に除去する"""
     for img in soup.find_all("img"):
         alt = (img.get("alt") or "").strip()
         if alt:

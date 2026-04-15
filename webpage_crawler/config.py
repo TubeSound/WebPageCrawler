@@ -26,6 +26,25 @@ class SiteConfig:
     navigation_timeout_ms: int = 30_000
     retries: int = 2
     headless: bool = True
+    max_depth: int = 3
+    click_max_depth: int = 1
+    enqueue_page_links_before_clicks: bool = True
+    no_click_patterns: list[str] = field(default_factory=list)
+    block_resource_types: list[str] = field(default_factory=lambda: ["image", "font"])
+    block_url_patterns: list[str] = field(
+        default_factory=lambda: [
+            "*.png",
+            "*.jpg",
+            "*.jpeg",
+            "*.gif",
+            "*.svg",
+            "*.webp",
+            "*.ico",
+            "*.woff",
+            "*.woff2",
+            "*.ttf",
+        ]
+    )
     click_visible_elements: bool = True
     max_interaction_clicks_per_page: int = 200
     interaction_candidate_selector: str = (
@@ -68,6 +87,28 @@ class SiteConfig:
             navigation_timeout_ms=int(data.get("navigation_timeout_ms", 30_000)),
             retries=int(data.get("retries", 2)),
             headless=bool(data.get("headless", True)),
+            max_depth=int(data.get("max_depth", 3)),
+            click_max_depth=int(data.get("click_max_depth", 1)),
+            enqueue_page_links_before_clicks=bool(data.get("enqueue_page_links_before_clicks", True)),
+            no_click_patterns=list(data.get("no_click_patterns", [])),
+            block_resource_types=list(data.get("block_resource_types", ["image", "font"])),
+            block_url_patterns=list(
+                data.get(
+                    "block_url_patterns",
+                    [
+                        "*.png",
+                        "*.jpg",
+                        "*.jpeg",
+                        "*.gif",
+                        "*.svg",
+                        "*.webp",
+                        "*.ico",
+                        "*.woff",
+                        "*.woff2",
+                        "*.ttf",
+                    ],
+                )
+            ),
             click_visible_elements=bool(data.get("click_visible_elements", True)),
             max_interaction_clicks_per_page=int(data.get("max_interaction_clicks_per_page", 200)),
             interaction_candidate_selector=str(

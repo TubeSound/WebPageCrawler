@@ -10,12 +10,19 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from webpage_crawler.config import load_site_config
+from webpage_crawler.crawler_steps import WebPageCrawlerSteps
 from webpage_crawler.crawler import WebPageCrawler
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Domain-limited Playwright web crawler.")
     parser.add_argument("--config", required=True, help="Path to site JSON config.")
+    parser.add_argument(
+        "--crawler",
+        choices=["default", "steps"],
+        default="default",
+        help="Crawler implementation to use.",
+    )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -30,7 +37,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 async def async_main() -> None:
     args = build_parser().parse_args()
-    crawler = WebPageCrawler(load_site_config(args.config))
+    config = load_site_config(args.config)
+    crawler = (
+        WebPageCrawlerSteps(config)
+        if args.crawler == "steps"
+        else WebPageCrawler(config)
+    )
 
     if args.command == "crawl":
         await crawler.write_jsonl(Path(args.output))

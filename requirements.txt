@@ -4,3 +4,5 @@ openpyxl
 playwright
 beautifulsoup4
 markdownify
+treelib
+treelib
